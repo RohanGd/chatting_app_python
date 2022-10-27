@@ -27,7 +27,7 @@ def is_communicating(client_sock):
         return False
     return True
 
-def communicate_with_client(client_sock, client_addr):
+def communicate_with_client(client_sock, client_addr, pending_messages, ACTIVE_USERS, client_id):
     print("[CONNECTION ESTABLISHED]")
     buff = 64
     # while is_communicating(client_sock):
@@ -44,7 +44,8 @@ def communicate_with_client(client_sock, client_addr):
             msg = loads(msg)
             pending_messages.put(msg)
         except:
-            client_sock.close()
+            # client_sock.close()
+            ACTIVE_USERS.remove(client_id)
             break
 
     for msg_obj in list(pending_messages.queue):
@@ -58,12 +59,21 @@ def setup_connections(ADDR, sock, pending_messages, ALL_USERS, ACTIVE_USERS):
         client_id = int(client_sock.recv(10).decode())
         ALL_USERS[client_id] = client_sock
         ACTIVE_USERS.add(client_id)
-        threading.Thread(target=communicate_with_client, args=(client_sock, client_addr)).start()
+        threading.Thread(target=communicate_with_client, args=(client_sock, client_addr, pending_messages, ACTIVE_USERS, client_id)).start()
+        print(ALL_USERS.keys)
+        print(ACTIVE_USERS)
 
-def send_message(client_sock):
-    msg = dumps(msg)
-    client_sock.sendall(msg)
 
+def send_message(client_sock, msg):
+    try:
+        msg = dumps(msg)
+        dat_size = len(msg)
+        # print(dat_size)
+        client_sock.send(str(dat_size).encode())
+
+        client_sock.send(msg)
+    except:
+        return
 def distribute_messages(ADDR, sock, pending_messages, ALL_USERS, ACTIVE_USERS):
     while True:
         try: 
@@ -89,10 +99,10 @@ set_connections_thread = threading.Thread(target=setup_connections, args=(ADDR, 
 message_distribution_thread = threading.Thread(target=distribute_messages, args=(ADDR, sock, pending_messages, ALL_USERS, ACTIVE_USERS))
 
 set_connections_thread.start()
-# message_distribution_thread.start()
+message_distribution_thread.start()
 
 set_connections_thread.join()
-# message_distribution_thread.join()
+message_distribution_thread.join()
 
 for msg_obj in list(pending_messages.queue):
     print(msg_obj.message)

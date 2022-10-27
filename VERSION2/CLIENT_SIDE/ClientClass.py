@@ -2,7 +2,7 @@ import socket
 # from CLIENT_SIDE.Message import Message_obj
 from SERVER_INFO import get_server_info
 from Message import Message_obj
-from pickle import dumps
+from pickle import dumps, loads
 
 class User:
     def __init__(self):
@@ -12,11 +12,13 @@ class User:
             self.Id = self.set_id()
         self.sock = None 
         self.server_ADDR = get_server_info()
+        self.my_messages = []
     
     def login(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(self.server_ADDR)
         self.sock.send(str(self.Id).encode())
+        # self.get_my_messages()
 
     def logout(self):
         # s = "0_EOF_0"
@@ -54,5 +56,27 @@ class User:
         if x > 1000000000 and x < 10000000000:
             return x
         return None 
+
+    def get_my_messages(self):
+        while True:
+            try:
+                buff = 64
+                dat_size = int(self.sock.recv(64).decode())
+                if dat_size == 0:
+                    return
+                msg = b""
+                print(dat_size)
+                while dat_size>0:
+                    dat = self.sock.recv(min(buff,dat_size))
+                    dat_size -= buff
+                    msg += dat
+                
+                msg = loads(msg)
+                print(msg.message)
+                self.my_messages.append(msg)
+            except:
+                return
+    def show_messages(self):
+        print(self.my_messages)
     
 
